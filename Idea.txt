@@ -1,0 +1,5 @@
+- Reworked the llama.cpp decode path (C++) for multi-request inference by introducing request batching and a concurrency-aware scheduler, improving throughput by 1.5–2.0× while reducing tail latency under load.
+- Performed system-level profiling over long-horizon generations (10K+ tokens) and 1–16 concurrent requests, identifying KV-cache reads and memory bandwidth pressure as the primary bottlenecks in autoregressive decoding.
+- Optimized KV-cache access and memory behavior across CPU and GPU paths, including CUDA kernel-level improvements to reduce redundant memory movement and improve memory access efficiency during decoding.
+- Refined KV-cache reuse and allocation strategy to mitigate fragmentation and stabilize latency, achieving a 30%+ reduction in variance under sustained workloads.
+- Built a modular benchmarking framework for throughput (tokens/sec), latency, and scaling curves, enabling reproducible evaluation of batching, scheduling, and memory optimization strategies.
