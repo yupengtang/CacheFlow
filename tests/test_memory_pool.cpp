@@ -33,7 +33,7 @@ static void test_exhaust_pool() {
     }
 
     assert(pool.num_free() == 0);
-    void* p = pool.allocate();
+    [[maybe_unused]] void* p = pool.allocate();
     assert(p == nullptr);
 
     for (auto* ptr : ptrs)
@@ -62,7 +62,7 @@ static void test_block_id_conversion() {
 
     void* p0 = pool.allocate();
     BlockId id = pool.ptr_to_block_id(p0);
-    void* p_back = pool.block_id_to_ptr(id);
+    [[maybe_unused]] void* p_back = pool.block_id_to_ptr(id);
     assert(p0 == p_back);
 
     pool.deallocate(p0);
@@ -75,7 +75,7 @@ static void test_utilization() {
     assert(pool.utilization() == 0.0f);
 
     for (int i = 0; i < 5; ++i) pool.allocate();
-    float util = pool.utilization();
+    [[maybe_unused]] float util = pool.utilization();
     assert(util > 0.49f && util < 0.51f);
 
     std::cout << "  PASS: test_utilization\n";
@@ -89,7 +89,7 @@ static void test_reset() {
     pool.reset();
     assert(pool.num_free() == 10);
 
-    void* p = pool.allocate();
+    [[maybe_unused]] void* p = pool.allocate();
     assert(p != nullptr);
 
     std::cout << "  PASS: test_reset\n";
@@ -100,8 +100,8 @@ static void test_pool_manager() {
     assert(pm.gpu_pool().num_free() == 10);
     assert(pm.cpu_pool().num_free() == 20);
 
-    auto& gpu = pm.pool_for(DeviceType::CUDA);
-    auto& cpu = pm.pool_for(DeviceType::CPU);
+    [[maybe_unused]] auto& gpu = pm.pool_for(DeviceType::CUDA);
+    [[maybe_unused]] auto& cpu = pm.pool_for(DeviceType::CPU);
     assert(gpu.num_free() == 10);
     assert(cpu.num_free() == 20);
 

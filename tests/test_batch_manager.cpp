@@ -30,7 +30,7 @@ static void test_build_batch_prefill() {
     assert(batch.total_tokens == 8);
     assert(batch.entries[0].is_prefill);
 
-    auto stats = batch_mgr.last_stats();
+    [[maybe_unused]] auto stats = batch_mgr.last_stats();
     assert(stats.num_prefill_tokens == 8);
     assert(stats.num_decode_tokens == 0);
 
@@ -62,7 +62,7 @@ static void test_build_batch_decode() {
     auto batch2 = batch_mgr.build_batch(out2);
 
     assert(!batch2.empty());
-    auto stats = batch_mgr.last_stats();
+    [[maybe_unused]] auto stats = batch_mgr.last_stats();
     assert(stats.num_decode_tokens == 1);
 
     std::cout << "  PASS: test_build_batch_decode\n";
@@ -88,7 +88,7 @@ static void test_update_appends_token() {
     batch_mgr.build_batch(out);
     batch_mgr.update_after_decode(out, {42});
 
-    auto* seq = &out.scheduled_groups[0]->sequences[0];
+    [[maybe_unused]] auto* seq = &out.scheduled_groups[0]->sequences[0];
     assert(seq->output_len() == 1);
     assert(seq->output_tokens[0] == 42);
 
@@ -117,7 +117,7 @@ static void test_multi_sequence_batch() {
     auto out = sched.schedule();
     auto batch = batch_mgr.build_batch(out);
 
-    auto stats = batch_mgr.last_stats();
+    [[maybe_unused]] auto stats = batch_mgr.last_stats();
     assert(stats.num_sequences == 3);
     assert(stats.num_prefill_tokens == 48);
 

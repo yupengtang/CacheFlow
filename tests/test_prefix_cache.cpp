@@ -92,7 +92,7 @@ static void test_hit_rate() {
     pc.lookup(tokens);
     pc.lookup({99, 98, 97, 96});
 
-    auto stats = pc.stats();
+    [[maybe_unused]] auto stats = pc.stats();
     assert(stats.lookups == 3);
     assert(stats.hits == 2);
     assert(stats.misses == 1);
@@ -116,7 +116,7 @@ static void test_stats_reset() {
     pc.lookup(t);
 
     pc.reset_stats();
-    auto stats = pc.stats();
+    [[maybe_unused]] auto stats = pc.stats();
     assert(stats.lookups == 0);
     assert(stats.hits == 0);
 

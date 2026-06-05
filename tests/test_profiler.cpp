@@ -34,10 +34,10 @@ static void test_histogram() {
         hist.record(static_cast<double>(i));
 
     assert(hist.total() == 100);
-    double p50 = hist.percentile(50);
+    [[maybe_unused]] double p50 = hist.percentile(50);
     assert(p50 > 45.0 && p50 < 55.0);
 
-    double p99 = hist.percentile(99);
+    [[maybe_unused]] double p99 = hist.percentile(99);
     assert(p99 > 95.0);
 
     hist.record(-5.0);
@@ -57,7 +57,7 @@ static void test_throughput_meter() {
     meter.record_interval(20.0);
 
     assert(meter.total_tokens() == 300);
-    double tps = meter.tokens_per_sec();
+    [[maybe_unused]] double tps = meter.tokens_per_sec();
     assert(tps > 0.0);
     assert(std::abs(tps - 10000.0) < 100.0);
 
@@ -80,7 +80,7 @@ static void test_profiler_lifecycle() {
     prof.begin_step(64);
     prof.end_step(2.0);
 
-    auto snap = prof.snapshot();
+    [[maybe_unused]] auto snap = prof.snapshot();
     assert(snap.throughput_tok_per_sec > 0);
     assert(snap.avg_latency_ms > 0);
 
@@ -131,7 +131,7 @@ static void test_profiler_reset() {
     prof.end_step(3.0);
 
     prof.reset();
-    auto snap = prof.snapshot();
+    [[maybe_unused]] auto snap = prof.snapshot();
     assert(snap.total_tokens_generated == 0);
     assert(snap.avg_latency_ms == 0.0);
 

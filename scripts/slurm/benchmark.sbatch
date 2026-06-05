@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=cacheflow-bench
-#SBATCH --account=mgt6655
-#SBATCH --partition=gpu
+#SBATCH --account=bios
+#SBATCH --partition=ice-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:V100:1
+#SBATCH --gres=gpu:v100:1
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
 #SBATCH --output=cacheflow-bench-%j.out

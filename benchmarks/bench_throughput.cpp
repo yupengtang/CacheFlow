@@ -53,8 +53,6 @@ static BenchResult run_throughput_bench(const BenchConfig& cfg) {
     auto prompts = generate_prompts(
         cfg.num_requests, cfg.prompt_len, cfg.shared_prefix_ratio);
 
-    auto t_start = Clock::now();
-
     SeqId next_id = 0;
     size_t submitted = 0;
     size_t completed = 0;
@@ -98,9 +96,6 @@ static BenchResult run_throughput_bench(const BenchConfig& cfg) {
         }
         scheduler.free_finished_requests();
     }
-
-    auto t_end = Clock::now();
-    double total_ms = Duration(t_end - t_start).count();
 
     auto snap = profiler.snapshot();
     BenchResult result;
