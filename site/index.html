@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,14 @@
   <meta property="og:type" content="website">
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    // prevent FOUC: apply stored theme before first paint
+    (function(){var t=localStorage.getItem('cf-theme');
+    if(!t)t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';
+    document.documentElement.setAttribute('data-theme',t);})();
+  </script>
 </head>
 <body>
 
@@ -23,12 +30,16 @@
       <li><a href="#results">Results</a></li>
       <li><a href="#approach">Approach</a></li>
       <li><a href="#impl">Impl</a></li>
-      <li><a href="#code">Code</a></li>
+      <li><a href="#code">Build</a></li>
     </ul>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
   </div>
 </nav>
 
-<!-- ════════════════ Hero ════════════════ -->
+<!-- ═══════════ Hero ═══════════ -->
 
 <header class="hero">
   <div class="container">
@@ -36,13 +47,13 @@
     <p class="tagline">
       Reworking the llama.cpp autoregressive decode path for multi-request
       inference. Block-based KV-cache management, continuous batching, and
-      CUDA kernel-level memory optimizations — from profiling bottlenecks
+      CUDA kernel-level memory optimizations &mdash; from profiling bottlenecks
       to shipping measurable gains.
     </p>
     <div class="hero-stats">
       <div class="hero-stat">
         <div class="value">1.8&times;</div>
-        <div class="label">Throughput improvement</div>
+        <div class="label">Throughput</div>
       </div>
       <div class="hero-stat">
         <div class="value">&minus;34%</div>
@@ -50,11 +61,11 @@
       </div>
       <div class="hero-stat">
         <div class="value">16</div>
-        <div class="label">Concurrent requests</div>
+        <div class="label">Concurrent reqs</div>
       </div>
       <div class="hero-stat">
         <div class="value">10K+</div>
-        <div class="label">Token generation horizon</div>
+        <div class="label">Token horizon</div>
       </div>
     </div>
     <div class="badge-row">
@@ -67,7 +78,7 @@
   </div>
 </header>
 
-<!-- ════════════════ Motivation ════════════════ -->
+<!-- ═══════════ Motivation ═══════════ -->
 
 <section id="motivation">
   <div class="container">
@@ -96,7 +107,7 @@
           During autoregressive decode, each token reads the full KV-cache
           for that sequence. With 32 layers &times; 128-dim heads, a 4K-context
           request reads ~256 MB per step. The compute-to-memory ratio is
-          terrible — the GPU spends most of its time waiting on memory.
+          terrible &mdash; the GPU spends most of its time waiting on memory.
         </p>
       </div>
       <div class="card">
@@ -115,7 +126,7 @@
         <p>
           Without batching, the GPU processes one decode step for one request
           per iteration. The attention kernel's arithmetic intensity is low
-          for a single sequence — batching multiple sequences multiplies
+          for a single sequence &mdash; batching multiple sequences multiplies
           the useful compute per memory transaction.
         </p>
       </div>
@@ -123,7 +134,7 @@
   </div>
 </section>
 
-<!-- ════════════════ Architecture ════════════════ -->
+<!-- ═══════════ Architecture ═══════════ -->
 
 <section id="architecture">
   <div class="container">
@@ -138,42 +149,42 @@
 
     <div class="arch-diagram"><pre>
 <span class="hl-dim">  Incoming requests</span>
-         │
-         ▼
-┌─────────────────────┐     ┌──────────────────────┐
-│  <span class="hl-blue">Scheduler</span>           │────▶│  <span class="hl-blue">Batch Manager</span>        │
-│  FCFS / SJF / Prio  │     │  continuous batching  │
-│  preempt + swap      │     │  prefill + decode     │
-└─────────┬───────────┘     └──────────┬───────────┘
-          │                            │
-          ▼                            ▼
-┌─────────────────────┐     ┌──────────────────────┐
-│  <span class="hl-green">Block Manager</span>       │     │  <span class="hl-orange">Decode Engine</span>        │
-│  alloc / free / COW  │     │  batched forward pass │
-│  frag analysis       │     │  top-k/p sampling     │
-└─────────┬───────────┘     └──────────┬───────────┘
-          │                            │
-          ▼                            ▼
-┌─────────────────────┐     ┌──────────────────────┐
-│  <span class="hl-green">Memory Pool</span>         │     │  <span class="hl-orange">CUDA Kernels</span>         │
-│  slab allocator      │     │  paged_attn v1 / v2  │
-│  GPU + CPU pools     │     │  reshape_and_cache   │
-└─────────┬───────────┘     │  copy / swap / compact│
-          │                 └──────────────────────┘
-          ▼
-┌─────────────────────┐
-│  <span class="hl-green">Prefix Cache</span>        │     ┌──────────────────────┐
-│  trie-based lookup   │     │  <span class="hl-purple">Profiler</span>             │
-│  LRU eviction        │     │  TTFT, TPOT, tput    │
-│  shared-prefix reuse │     │  Chrome Trace export  │
-└─────────────────────┘     └──────────────────────┘</pre></div>
+         |
+         v
++-----------------------+     +------------------------+
+|  <span class="hl-blue">Scheduler</span>             |---->|  <span class="hl-blue">Batch Manager</span>          |
+|  FCFS / SJF / Prio    |     |  continuous batching    |
+|  preempt + swap        |     |  prefill + decode       |
++-----------+-----------+     +------------+-----------+
+            |                              |
+            v                              v
++-----------------------+     +------------------------+
+|  <span class="hl-green">Block Manager</span>         |     |  <span class="hl-orange">Decode Engine</span>          |
+|  alloc / free / COW    |     |  batched forward pass   |
+|  frag analysis         |     |  top-k/p sampling       |
++-----------+-----------+     +------------+-----------+
+            |                              |
+            v                              v
++-----------------------+     +------------------------+
+|  <span class="hl-green">Memory Pool</span>           |     |  <span class="hl-orange">CUDA Kernels</span>           |
+|  slab allocator        |     |  paged_attn v1 / v2    |
+|  GPU + CPU pools       |     |  reshape_and_cache     |
++-----------+-----------+     |  copy / swap / compact  |
+            |                 +------------------------+
+            v
++-----------------------+
+|  <span class="hl-green">Prefix Cache</span>          |     +------------------------+
+|  trie-based lookup     |     |  <span class="hl-purple">Profiler</span>               |
+|  LRU eviction          |     |  TTFT, TPOT, tput      |
+|  shared-prefix reuse   |     |  Chrome Trace export    |
++-----------------------+     +------------------------+</pre></div>
 
     <div class="cards">
       <div class="card">
         <div class="card-tag cuda">cuda</div>
         <h4>Paged Attention V1 / V2</h4>
         <p>
-          V1 assigns one warp per query head — good up to ~8K context. V2
+          V1 assigns one warp per query head &mdash; good up to ~8K context. V2
           partitions across the sequence dimension with a log-sum-exp reduce,
           scaling to 32K+ contexts. Both handle the block-table indirection
           to read from non-contiguous physical blocks.
@@ -212,7 +223,7 @@
   </div>
 </section>
 
-<!-- ════════════════ Results ════════════════ -->
+<!-- ═══════════ Results ═══════════ -->
 
 <section id="results">
   <div class="container">
@@ -317,13 +328,13 @@
       The variance reduction is most visible in long-horizon generation.
       Over 10K output tokens with 8 concurrent requests, the standard
       deviation of per-step latency dropped from 52.7 ms to 10.8 ms
-      (&minus;34%) — the block allocator and defragmentation kernel keep
+      (&minus;34%) &mdash; the block allocator and defragmentation kernel keep
       memory access patterns stable as sequences grow.
     </p>
   </div>
 </section>
 
-<!-- ════════════════ Approach ════════════════ -->
+<!-- ═══════════ Approach ═══════════ -->
 
 <section id="approach">
   <div class="container">
@@ -338,7 +349,7 @@
           The scheduler maintains three queues (waiting, running, swapped)
           and implements continuous batching: it adds new sequences and
           removes finished ones at each decode iteration. When GPU memory
-          is insufficient, it preempts the lowest-priority sequence —
+          is insufficient, it preempts the lowest-priority sequence &mdash;
           either swapping its KV blocks to CPU or dropping them entirely
           for recomputation later. The scheduling policy is pluggable
           (FCFS, shortest-remaining, priority).
@@ -411,7 +422,7 @@
   </div>
 </section>
 
-<!-- ════════════════ Implementation ════════════════ -->
+<!-- ═══════════ Implementation ═══════════ -->
 
 <section id="impl">
   <div class="container">
@@ -425,7 +436,14 @@
       token position. Lane-parallel reduction across head_dim, then
       warp-level max for the softmax numerics.
     </p>
-    <div class="code-block"><pre><span class="keyword">for</span> (<span class="type">int</span> block_idx = warp_idx; block_idx < num_blocks;
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-dot r"></span>
+        <span class="code-dot y"></span>
+        <span class="code-dot g"></span>
+        cuda/paged_attention.cu
+      </div>
+<pre><span class="keyword">for</span> (<span class="type">int</span> block_idx = warp_idx; block_idx < num_blocks;
      block_idx += num_warps) {
 
     <span class="keyword">const</span> <span class="type">int</span> phys_block = block_tables[
@@ -448,7 +466,8 @@
             smem_qk[block_idx * BLOCK_SIZE + tok_off] = dot;
         qk_max = fmaxf(qk_max, dot);
     }
-}</pre></div>
+}</pre>
+    </div>
 
     <h3>Copy-on-write &mdash; shared block deduplication</h3>
     <p>
@@ -457,7 +476,14 @@
       it skips the copy entirely. Otherwise it allocates a new block,
       copies the data, and decrements the source's refcount.
     </p>
-    <div class="code-block"><pre><span class="type">BlockId</span> BlockManager::copy_on_write(
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-dot r"></span>
+        <span class="code-dot y"></span>
+        <span class="code-dot g"></span>
+        kv_cache/block_manager.cpp
+      </div>
+<pre><span class="type">BlockId</span> BlockManager::copy_on_write(
     <span class="type">BlockId</span> src_block, <span class="type">SeqId</span> new_seq, <span class="type">DeviceType</span> device)
 {
     std::lock_guard&lt;std::mutex&gt; lock(mu_);
@@ -480,28 +506,41 @@
     cow_pairs_.push_back({src_block, new_bid, device});
     seq_block_map_[new_seq].emplace_back(device, new_bid);
     <span class="keyword">return</span> new_bid;
-}</pre></div>
+}</pre>
+    </div>
   </div>
 </section>
 
-<!-- ════════════════ Code ════════════════ -->
+<!-- ═══════════ Code ═══════════ -->
 
 <section id="code">
   <div class="container">
-    <div class="section-label">Code</div>
+    <div class="section-label">Build</div>
     <h2>Build and run</h2>
 
-    <div class="code-block"><pre><span class="comment"># Build (CUDA auto-detected)</span>
-<span class="keyword">git clone</span> https://github.com/ytang454/CacheFlow.git
-<span class="keyword">cd</span> CacheFlow && <span class="keyword">bash</span> setup.sh
-
-<span class="comment"># Or manual build</span>
-<span class="keyword">mkdir</span> build && <span class="keyword">cd</span> build
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-dot r"></span>
+        <span class="code-dot y"></span>
+        <span class="code-dot g"></span>
+        terminal
+      </div>
+<pre><span class="comment"># Build (CUDA auto-detected)</span>
+<span class="keyword">git clone</span> https://github.com/yupengtang/CacheFlow.git
+<span class="keyword">cd</span> CacheFlow && <span class="keyword">mkdir</span> build && <span class="keyword">cd</span> build
 <span class="keyword">cmake</span> .. -DCMAKE_BUILD_TYPE=Release
 <span class="keyword">cmake</span> --build . --parallel <span class="number">$(nproc)</span>
-<span class="keyword">ctest</span> --output-on-failure</pre></div>
+<span class="keyword">ctest</span> --output-on-failure</pre>
+    </div>
 
-    <div class="code-block"><pre><span class="comment"># Run benchmarks</span>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-dot r"></span>
+        <span class="code-dot y"></span>
+        <span class="code-dot g"></span>
+        benchmarks
+      </div>
+<pre><span class="comment"># Run benchmarks</span>
 ./benchmarks/bench_throughput -n <span class="number">200</span> -p <span class="number">128</span> -o <span class="number">256</span> -c <span class="number">8</span> -i <span class="number">5</span>
 ./benchmarks/bench_scaling   -n <span class="number">50</span>  -p <span class="number">128</span> -o <span class="number">256</span>
 ./benchmarks/bench_latency   -n <span class="number">100</span> -p <span class="number">128</span>
@@ -509,25 +548,36 @@
 
 <span class="comment"># Generate plots</span>
 <span class="keyword">python3</span> benchmarks/scripts/plot_scaling.py results/scaling_results.csv
-<span class="keyword">python3</span> benchmarks/scripts/generate_report.py -d results/</pre></div>
+<span class="keyword">python3</span> benchmarks/scripts/generate_report.py -d results/</pre>
+    </div>
 
     <h3>Project structure</h3>
-    <div class="code-block"><pre><span class="type">src/cacheflow/</span>
-├── <span class="type">scheduler/</span>    <span class="comment">scheduler.cpp, batch_manager.cpp, request.h</span>
-├── <span class="type">kv_cache/</span>     <span class="comment">block_manager.cpp, memory_pool.cpp, prefix_cache.cpp</span>
-├── <span class="type">cuda/</span>         <span class="comment">paged_attention.cu, kv_cache_kernels.cu, memory_utils.cu</span>
-├── <span class="type">decode/</span>       <span class="comment">batch_decode.cpp (modified decode path + sampling)</span>
-└── <span class="type">profiler/</span>     <span class="comment">profiler.cpp, trace.cpp, metrics.h</span>
-<span class="type">benchmarks/</span>      <span class="comment">throughput, latency, scaling, kv-cache + Python plotting</span>
-<span class="type">tests/</span>           <span class="comment">6 test suites, all passing</span></pre></div>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-dot r"></span>
+        <span class="code-dot y"></span>
+        <span class="code-dot g"></span>
+        src/cacheflow/
+      </div>
+<pre><span class="type">scheduler/</span>    <span class="comment">scheduler.cpp, batch_manager.cpp, request.h</span>
+<span class="type">kv_cache/</span>     <span class="comment">block_manager.cpp, memory_pool.cpp, prefix_cache.cpp</span>
+<span class="type">cuda/</span>         <span class="comment">paged_attention.cu, kv_cache_kernels.cu, memory_utils.cu</span>
+<span class="type">decode/</span>       <span class="comment">batch_decode.cpp (modified decode path + sampling)</span>
+<span class="type">profiler/</span>     <span class="comment">profiler.cpp, trace.cpp, metrics.h</span>
+<span class="type">benchmarks/</span>   <span class="comment">throughput, latency, scaling, kv-cache + Python plotting</span>
+<span class="type">tests/</span>        <span class="comment">6 test suites, all passing</span></pre>
+    </div>
   </div>
 </section>
 
-<!-- ════════════════ Footer ════════════════ -->
+<!-- ═══════════ Footer ═══════════ -->
 
 <footer>
   <div class="container">
-    <p>Built with C++17 and CUDA. Tested on V100 and A100.</p>
+    <div class="footer-inner">
+      <p>Built with C++17 and CUDA 12. Tested on V100 and A100.</p>
+      <a href="https://github.com/yupengtang/CacheFlow">github.com/yupengtang/CacheFlow</a>
+    </div>
   </div>
 </footer>
 
